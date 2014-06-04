@@ -283,7 +283,7 @@ void MovieWriter::Obj::addFrame( const ImageSourceRef &imageSource, float durati
 	::CVPixelBufferRelease( pixelBuffer );
 
 	if( err )
-		MovieWriterExcFrameEncode();
+		throw MovieWriterExcFrameEncode();
 }
 
 extern "C" {
@@ -516,6 +516,8 @@ void MovieWriter::Obj::finish()
 		if( err )
 			throw MovieWriterExc();
 	}
+
+	::ICMCompressionSessionRelease( mCompressionSession );
         
 	// Close movie file
 	if( mDataHandler )
