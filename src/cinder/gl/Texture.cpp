@@ -463,6 +463,13 @@ void Texture::update( const Surface &surface, const Area &area )
 	glTexSubImage2D( mObj->mTarget, 0, area.getX1(), area.getY1(), area.getWidth(), area.getHeight(), dataFormat, type, surface.getData( area.getUL() ) );
 }
 
+void Texture::update(void* newData, GLint dataFormat)
+{
+	glBindTexture(mObj->mTarget, mObj->mTextureID);
+	glTexSubImage2D(mObj->mTarget, 0, 0, 0, 0, 0, dataFormat, GL_UNSIGNED_BYTE, newData);
+}
+
+
 void Texture::update( const Channel32f &channel )
 {
 	if( ( channel.getWidth() != getWidth() ) || ( channel.getHeight() != getHeight() ) )

@@ -114,6 +114,8 @@ class Texture {
 	void			update( const Channel32f &channel );
 	//! Replaces the pixels of a texture with contents of \a channel. Expects \a area's size to match the Texture's.
 	void			update( const Channel8u &channel, const Area &area );
+
+	void			update(void* newData, GLint dataFormat);
 	
 	//! the width of the texture in pixels
 	GLint			getWidth() const;
