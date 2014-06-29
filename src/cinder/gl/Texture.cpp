@@ -466,7 +466,7 @@ void Texture::update( const Surface &surface, const Area &area )
 void Texture::update(void* newData, GLint dataFormat)
 {
 	glBindTexture(mObj->mTarget, mObj->mTextureID);
-	glTexSubImage2D(mObj->mTarget, 0, 0, 0, 0, 0, dataFormat, GL_UNSIGNED_BYTE, newData);
+	glTexSubImage2D(mObj->mTarget, 0, 0, 0, mObj->mWidth, mObj->mHeight, dataFormat, GL_UNSIGNED_BYTE, newData);
 }
 
 
