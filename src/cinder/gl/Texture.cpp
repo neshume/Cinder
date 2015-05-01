@@ -303,6 +303,12 @@ void TextureBase::getInternalFormatInfo( GLint internalFormat, GLenum *outDataFo
 		case GL_DEPTH_STENCIL:			dataFormat = GL_DEPTH_STENCIL;		dataType = GL_UNSIGNED_INT_24_8;		break;
 		case GL_RED:					dataFormat = GL_RED;				dataType = GL_UNSIGNED_BYTE;			break;
 		case GL_RG:						dataFormat = GL_RG;					dataType = GL_UNSIGNED_BYTE;			break;
+		case GL_R16:					dataFormat = GL_RED;				dataType = GL_UNSIGNED_SHORT;			break;
+		case GL_RG16:					dataFormat = GL_RG;					dataType = GL_UNSIGNED_SHORT;			break;
+		case GL_RGB16:					dataFormat = GL_RGB;				dataType = GL_UNSIGNED_SHORT;			break;
+		case GL_RGBA16:					dataFormat = GL_RGBA;				dataType = GL_UNSIGNED_SHORT;			break;
+		case GL_R16_SNORM:				dataFormat = GL_RED;				dataType = GL_SHORT;					break;
+		case GL_RG16_SNORM:				dataFormat = GL_RG;					dataType = GL_SHORT;					break;
 #endif // ! CINDER_GL_ES
 
 		// SIZED DEPTH FORMATS
@@ -1075,12 +1081,9 @@ void Texture2d::setData( const ChannelT<T> &original, bool createStorage, int mi
 
 	const ChannelT<T> &source = ( useIntermediate ) ? intermediate : original;
 
-#if defined( CINDER_GL_ES )
-	GLint dataFormat = GL_LUMINANCE;
-#else
-	GLint dataFormat = GL_RED;
-#endif
-
+	GLenum dataFormat;
+	getInternalFormatInfo( mInternalFormat, &dataFormat, nullptr, nullptr, nullptr, nullptr );
+	
 	GLenum type = GL_UNSIGNED_BYTE;
 	if( std::is_same<uint16_t,T>::value )
 		type = GL_UNSIGNED_SHORT;
@@ -1532,9 +1535,9 @@ Texture3dRef Texture3d::create( GLint width, GLint height, GLint depth, Format f
 	return Texture3dRef( new Texture3d( width, height, depth, format ) );
 }
 
-Texture3dRef Texture3d::create( GLint width, GLint height, GLint depth, GLenum dataFormat, const uint8_t *data, Format format )
+Texture3dRef Texture3d::create( GLint width, GLint height, GLint depth, GLenum dataFormat, GLenum dataType, const void *data, Format format )
 {
-	return Texture3dRef( new Texture3d( width, height, depth, dataFormat, data, format ) );
+	return Texture3dRef( new Texture3d( width, height, depth, dataFormat, dataType, data, format ) );
 }
 
 Texture3d::Texture3d( GLint width, GLint height, GLint depth, Format format )
@@ -1549,7 +1552,7 @@ Texture3d::Texture3d( GLint width, GLint height, GLint depth, Format format )
 	env()->allocateTexStorage3d( mTarget, format.mMaxMipmapLevel + 1, mInternalFormat, mWidth, mHeight, mDepth, format.isImmutableStorage() );
 }
 
-Texture3d::Texture3d( GLint width, GLint height, GLint depth, GLenum dataFormat, const uint8_t *data, Format format )
+Texture3d::Texture3d( GLint width, GLint height, GLint depth, GLenum dataFormat, GLenum dataType, const void *data, Format format )
 	: mWidth( width ), mHeight( height ), mDepth( depth )
 {
 	glGenTextures( 1, &mTextureId );
@@ -1557,7 +1560,7 @@ Texture3d::Texture3d( GLint width, GLint height, GLint depth, GLenum dataFormat,
 	ScopedTextureBind texBindScope( mTarget, mTextureId );
 	TextureBase::initParams( format, GL_RGB );
 
-	glTexImage3D( mTarget, 0, mInternalFormat, mWidth, mHeight, mDepth, 0, dataFormat, GL_UNSIGNED_BYTE, data );
+	glTexImage3D( mTarget, 0, mInternalFormat, mWidth, mHeight, mDepth, 0, dataFormat, dataType, data );
 }
 
 void Texture3d::update( const Surface8u &surface, int depth, int mipLevel )
@@ -1569,11 +1572,16 @@ void Texture3d::update( const Surface8u &surface, int depth, int mipLevel )
 	ivec2 mipMapSize = calcMipLevelSize( mipLevel, getWidth(), getHeight() );
 	if( surface.getSize() != mipMapSize )
 		throw TextureResizeExc( "Invalid Texture3d::update() surface dimensions", surface.getSize(), mipMapSize );
+	
+	update(0, 0, depth, mipMapSize.x, mipMapSize.y, 1, dataFormat, type, (void*)surface.getData(), mipLevel);
+}
 
+void Texture3d::update( GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum dataFormat, GLenum dataType,  void *data, int mipLevel )
+{
 	ScopedTextureBind tbs( mTarget, mTextureId );
 	glTexSubImage3D( mTarget, mipLevel,
-		0, 0, depth, // offsets
-		mipMapSize.x, mipMapSize.y, 1, dataFormat, type, surface.getData() );
+					xoffset, yoffset, zoffset, // offsets
+					width, height, depth, dataFormat, dataType, data );
 }
 
 void Texture3d::printDims( std::ostream &os ) const

@@ -106,12 +106,21 @@ Context::Context( const std::shared_ptr<PlatformData> &platformData )
 	// initial state for depth mask is enabled
 	mBoolStateStack[GL_DEPTH_WRITEMASK] = vector<GLboolean>();
 	mBoolStateStack[GL_DEPTH_WRITEMASK].push_back( GL_TRUE );
+	
+	// initial state for depth test is disabled
+	mBoolStateStack[GL_DEPTH_TEST] = vector<GLboolean>();
+	mBoolStateStack[GL_DEPTH_TEST].push_back( GL_FALSE );
+	
+	// push default depth function
+	pushDepthFunc();
+	
 	mActiveTextureStack.push_back( 0 );
 
 #if ! defined( CINDER_GL_ES )
 	// initial state for polygonMode is GL_FILL
 	mPolygonModeStack.push_back( GL_FILL );
 #endif
+	
 
 	mImmediateMode = gl::VertBatch::create();
 	
@@ -1382,7 +1391,88 @@ float Context::getLineWidth()
 // DepthMask
 void Context::depthMask( GLboolean enable )
 {
-	setBoolState( GL_DEPTH_WRITEMASK, enable, glDepthMask );
+	if( setStackState( mDepthMaskStack, enable ) ) {
+		glDepthMask( enable );
+	}
+}
+
+void Context::pushDepthMask( GLboolean enable )
+{
+	if( pushStackState( mDepthMaskStack, enable ) ) {
+		glDepthMask( enable );
+	}
+}
+
+void Context::pushDepthMask()
+{
+	mDepthMaskStack.push_back( getDepthMask() );
+}
+
+void Context::popDepthMask( bool forceRestore )
+{
+	if( mDepthMaskStack.empty() )
+		CI_LOG_E( "Depth mask stack underflow" );
+	else if( popStackState( mDepthMaskStack ) || forceRestore )
+		glDepthMask( getDepthMask() );
+}
+
+GLboolean Context::getDepthMask()
+{
+	if( mDepthMaskStack.empty() ) {
+		GLint queriedInt;
+		glGetIntegerv( GL_DEPTH_WRITEMASK, &queriedInt );
+		mDepthMaskStack.push_back( queriedInt ); // push twice
+		mDepthMaskStack.push_back( queriedInt );
+	}
+
+	return mDepthMaskStack.back();
+}
+
+//////////////////////////////////////////////////////////////////
+// DepthFunc
+void Context::depthFunc( GLenum func )
+{
+	if( func != GL_NEVER && func != GL_LESS && func != GL_EQUAL && func != GL_LEQUAL && func != GL_GREATER && func != GL_NOTEQUAL && func != GL_GEQUAL && func != GL_ALWAYS )
+		CI_LOG_E( "Wrong enum for the depth buffer comparison function" );
+	
+	if( setStackState( mDepthFuncStack, func ) ) {
+		glDepthFunc( func );
+	}
+}
+
+void Context::pushDepthFunc( GLenum func )
+{
+	if( func != GL_NEVER && func != GL_LESS && func != GL_EQUAL && func != GL_LEQUAL && func != GL_GREATER && func != GL_NOTEQUAL && func != GL_GEQUAL && func != GL_ALWAYS )
+		CI_LOG_E( "Wrong enum for the depth buffer comparison function" );
+	
+	if( pushStackState( mDepthFuncStack, func ) ) {
+		glDepthFunc( func );
+	}
+}
+
+void Context::pushDepthFunc()
+{
+	mDepthFuncStack.push_back( getDepthFunc() );
+}
+
+void Context::popDepthFunc( bool forceRestore )
+{
+	if( mDepthFuncStack.empty() )
+		CI_LOG_E( "Depth function stack underflow" );
+	else if( popStackState( mDepthFuncStack ) || forceRestore )
+		glDepthFunc( getDepthFunc() );
+}
+
+GLenum Context::getDepthFunc()
+{
+	if( mDepthFuncStack.empty() ) {
+		GLint queriedInt;
+		glGetIntegerv( GL_DEPTH_FUNC, &queriedInt );
+		mDepthFuncStack.push_back( queriedInt ); // push twice
+		mDepthFuncStack.push_back( queriedInt );
+	}
+
+	return mDepthFuncStack.back();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
